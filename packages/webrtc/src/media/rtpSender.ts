@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import debug from "debug";
 import { jspack } from "jspack";
+import { ReadableStream, WritableStream } from "node:stream/web";
 import Event from "rx.mini";
 import { setTimeout } from "timers/promises";
 import * as uuid from "uuid";
@@ -98,6 +99,9 @@ export class RTCRtpSender {
   stopped = false;
   rtcpRunning = false;
   private rtcpCancel = new AbortController();
+
+  private writable?: WritableStream;
+  private readable?: ReadableStream;
 
   constructor(
     public trackOrKind: Kind | MediaStreamTrack,
@@ -345,6 +349,9 @@ export class RTCRtpSender {
       rtpPayload = red.serialize();
     }
 
+    if (this.readable) {
+    }
+
     const size = this.dtlsTransport.sendRtp(rtpPayload, header);
 
     this.runRtcp();
@@ -437,6 +444,19 @@ export class RTCRtpSender {
         break;
     }
     this.onRtcp.execute(rtcpPacket);
+  }
+
+  createEncodedStreams(): {
+    readable: ReadableStream;
+    writable: WritableStream;
+  } {
+    const readable = new ReadableStream({ start: (controller) => {} });
+    const writable = new WritableStream();
+
+    this.readable = readable;
+    this.writable = writable;
+
+    return { readable, writable };
   }
 }
 

@@ -1,15 +1,14 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, { FC, useRef } from "react";
 import ReactDOM from "react-dom";
-import { Red, buffer2ArrayBuffer } from "werift-rtp";
-import { getAudioStream, uint32Add } from "./util";
+import { Red, buffer2ArrayBuffer, RedEncoder } from "werift-rtp";
+import { getAudioStream } from "./util";
 
 const peer = new RTCPeerConnection({
   //@ts-ignore
   encodedInsertableStreams: true,
   iceServers: [],
 });
-const distance = 3;
 
 const App: FC = () => {
   const remoteRef = useRef<HTMLAudioElement>();
@@ -65,37 +64,7 @@ const App: FC = () => {
 
 ReactDOM.render(<App />, document.getElementById("root"));
 
-class RedSender {
-  cache: { buffer: Buffer; timestamp: number }[] = [];
-  cacheSize = 10;
-  private distance = distance;
-
-  push(payload: { buffer: Buffer; timestamp: number }) {
-    this.cache.push(payload);
-    if (this.cache.length > this.cacheSize) {
-      this.cache.shift();
-    }
-  }
-
-  build() {
-    const redundantPayloads = this.cache.slice(-(this.distance + 1));
-    const presentPayload = redundantPayloads.pop();
-    const red = new Red();
-    redundantPayloads.forEach((redundant) => {
-      red.payloads.push({
-        bin: redundant.buffer,
-        blockPT: 97,
-        timestampOffset: uint32Add(
-          presentPayload.timestamp,
-          -redundant.timestamp
-        ),
-      });
-    });
-    red.payloads.push({ bin: presentPayload.buffer, blockPT: 97 });
-    return red;
-  }
-}
-const redSender = new RedSender();
+const redEncoder = new RedEncoder(3);
 
 const senderTransform = (sender: RTCRtpSender) => {
   const senderStreams = (sender as any).createEncodedStreams();
@@ -104,12 +73,13 @@ const senderTransform = (sender: RTCRtpSender) => {
   const transformStream = new TransformStream({
     transform: (encodedFrame, controller) => {
       const packet = Red.deSerialize(encodedFrame.data);
-      const newPayload = packet.payloads.at(-1);
-      redSender.push({
-        buffer: newPayload.bin,
+      const newPayload = packet.blocks.at(-1);
+      redEncoder.push({
+        block: newPayload.block,
+        blockPT: newPayload.blockPT,
         timestamp: encodedFrame.timestamp,
       });
-      const red = redSender.build().serialize();
+      const red = redEncoder.build().serialize();
       encodedFrame.data = buffer2ArrayBuffer(red);
       controller.enqueue(encodedFrame);
     },

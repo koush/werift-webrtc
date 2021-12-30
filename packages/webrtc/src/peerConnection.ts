@@ -87,6 +87,7 @@ export class RTCPeerConnection extends EventTarget {
   readonly onTransceiverAdded = new Event<[RTCRtpTransceiver]>();
   readonly onIceCandidate = new Event<[RTCIceCandidate]>();
   readonly onNegotiationneeded = new Event<[]>();
+  readonly onTrack = new Event<[MediaStreamTrack]>();
 
   ondatachannel?: CallbackWithValue<RTCDataChannelEvent>;
   onicecandidate?: CallbackWithValue<RTCPeerConnectionIceEvent>;
@@ -873,6 +874,7 @@ export class RTCPeerConnection extends EventTarget {
       transceiver,
       receiver: transceiver.receiver,
     };
+    this.onTrack.execute(track);
     this.emit("track", event);
     if (this.ontrack) this.ontrack(event);
   }
