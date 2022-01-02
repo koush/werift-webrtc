@@ -1,3 +1,4 @@
+import { TransformStream } from "stream/web";
 import { setTimeout } from "timers/promises";
 
 import {
@@ -183,5 +184,72 @@ describe("packages/webrtc/src/media/rtpReceiver.ts", () => {
     const res = redHandler.push(red, packet);
     expect(res.length).toBe(3);
     expect(res).toEqual([...redundantPackets, present]);
+  });
+
+  describe("insertable streams", () => {
+    const createFixtures = () => {
+      const receiver = new RTCRtpReceiver("video", createDtlsTransport(), 1234);
+      const track = new MediaStreamTrack({ kind: "video" });
+      track.ssrc = 777;
+      receiver.addTrack(track);
+      receiver.prepareReceive({
+        codecs: [
+          new RTCRtpCodecParameters({
+            mimeType: "video/vp8",
+            clockRate: 90000,
+            payloadType: 96,
+          }),
+        ],
+        encodings: [
+          new RTCRtpCodingParameters({
+            ssrc: 777,
+            payloadType: 96,
+          }),
+        ],
+        headerExtensions: [],
+      });
+
+      const { readable, writable } = receiver.createEncodedStreams();
+      return { receiver, track, readable, writable };
+    };
+
+    test("should success insert valid packet", async () => {
+      const { receiver, track, readable, writable } = createFixtures();
+
+      const transformStream = new TransformStream<RtpPacket>({
+        transform: (encodedFrame, controller) => {
+          encodedFrame.payload = Buffer.from("insert");
+          controller.enqueue(encodedFrame);
+        },
+      });
+      readable.pipeThrough(transformStream).pipeTo(writable);
+
+      setImmediate(() => {
+        receiver.handleRtpBySsrc(
+          new RtpPacket(
+            new RtpHeader({ ssrc: 777, payloadType: 96, sequenceNumber: 1 }),
+            Buffer.from([1, 2, 3, 4])
+          ),
+          {}
+        );
+      });
+      const [rtp] = await track.onReceiveRtp.asPromise(100);
+      expect(rtp.payload.toString()).toBe("insert");
+      receiver.stop();
+    });
+
+    test("should timeout insert null packet", async () => {
+      const { receiver, track, readable, writable } = createFixtures();
+
+      const transformStream = new TransformStream<RtpPacket>({
+        transform: (_, controller) => {
+          controller.enqueue(undefined);
+        },
+      });
+      readable.pipeThrough(transformStream).pipeTo(writable);
+      const err = await track.onReceiveRtp.asPromise(100).catch(() => "error");
+      expect(err).toBe("error");
+      receiver.stop();
+    });
   });
 });

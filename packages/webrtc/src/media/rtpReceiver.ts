@@ -1,6 +1,7 @@
 import { debug } from "debug";
 import { jspack } from "jspack";
 import Event from "rx.mini";
+import { ReadableStream, WritableStream } from "stream/web";
 import { setTimeout } from "timers/promises";
 import { v4 as uuid } from "uuid";
 
@@ -61,6 +62,11 @@ export class RTCRtpReceiver {
   rtcpRunning = false;
   private rtcpCancel = new AbortController();
   private remoteStreams: { [ssrc: number]: StreamStatistics } = {};
+
+  private writable?: WritableStream;
+  private readable?: ReadableStream;
+  private insertStream?: (rtp: RtpPacket) => void;
+  private onStreamTransformed = new Event<[RtpPacket]>();
 
   constructor(
     public kind: Kind,
@@ -219,12 +225,27 @@ export class RTCRtpReceiver {
     this.handleRTP(packet, extensions, track);
   };
 
-  private handleRTP(
+  private async handleRTP(
     packet: RtpPacket,
     extensions: Extensions,
     track?: MediaStreamTrack
   ) {
     if (this.stopped) return;
+
+    if (this.insertStream) {
+      setImmediate(() => this.insertStream!(packet));
+      try {
+        [packet] = await this.onStreamTransformed.watch((rtp) => {
+          return rtp.header.sequenceNumber === packet.header.sequenceNumber;
+        }, 1000);
+      } catch (error) {
+        log("stream transform timeout");
+        return;
+      }
+      if (packet == undefined) {
+        return;
+      }
+    }
 
     const codec = this.codecs[packet.header.payloadType];
     if (!codec) {
@@ -242,7 +263,8 @@ export class RTCRtpReceiver {
         RTP_EXTENSION_URI.transportWideCC
       ] as number;
       if (!transportSequenceNumber == undefined) {
-        throw new Error("undefined");
+        log("transportSequenceNumber undefined");
+        return;
       }
 
       this.receiverTWCC.handleTWCC(transportSequenceNumber);
@@ -282,6 +304,32 @@ export class RTCRtpReceiver {
     }
 
     this.runRtcp();
+  }
+
+  createEncodedStreams(): {
+    readable: ReadableStream;
+    writable: WritableStream;
+  } {
+    if (this.writable || this.readable) {
+      throw new Error("createEncodedStreams already called");
+    }
+
+    const readable = new ReadableStream<RtpPacket>({
+      start: (controller) => {
+        this.insertStream = (rtp) => {
+          controller.enqueue(rtp);
+        };
+      },
+    });
+    const writable = new WritableStream<RtpPacket>({
+      write: (rtp) => {
+        this.onStreamTransformed.execute(rtp);
+      },
+    });
+    this.readable = readable;
+    this.writable = writable;
+
+    return { readable, writable };
   }
 }
 

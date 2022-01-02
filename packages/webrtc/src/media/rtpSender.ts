@@ -1,8 +1,8 @@
 import { randomBytes } from "crypto";
 import debug from "debug";
 import { jspack } from "jspack";
-import { ReadableStream, WritableStream } from "node:stream/web";
 import Event from "rx.mini";
+import { ReadableStream, WritableStream } from "stream/web";
 import { setTimeout } from "timers/promises";
 import * as uuid from "uuid";
 
