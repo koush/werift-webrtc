@@ -1,5 +1,6 @@
 import { MediaRecorder, RTCPeerConnection } from "../../../packages/webrtc/src";
 import { Server } from "ws";
+import { TransformStream } from "stream/web";
 
 // open ./answer.html
 
@@ -13,28 +14,24 @@ server.on("connection", async (socket) => {
   });
 
   const pc = new RTCPeerConnection();
-  const startRecord = () => {
-    if (recorder.tracks.length === 1) {
-      recorder.start();
-    }
-  };
 
-  {
-    const transceiver = pc.addTransceiver("video");
-    transceiver.onTrack.subscribe((track) => {
-      transceiver.sender.replaceTrack(track);
-      recorder.addTrack(track);
-      startRecord();
-    });
-  }
-  {
-    const transceiver = pc.addTransceiver("audio");
-    transceiver.onTrack.subscribe((track) => {
-      transceiver.sender.replaceTrack(track);
-      recorder.addTrack(track);
-      startRecord();
-    });
-  }
+  const transceiver = pc.addTransceiver("video");
+
+  const { readable, writable } = transceiver.receiver.createEncodedStreams();
+  const transformStream = new TransformStream({
+    transform: (_, controller) => {
+      if (Math.random() < 0.3) {
+        controller.enqueue(undefined);
+      }
+    },
+  });
+  readable.pipeThrough(transformStream).pipeTo(writable);
+
+  transceiver.onTrack.subscribe((track) => {
+    transceiver.sender.replaceTrack(track);
+    recorder.addTrack(track);
+    recorder.start();
+  });
 
   setTimeout(() => {
     recorder.stop();
