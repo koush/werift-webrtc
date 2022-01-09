@@ -11,6 +11,7 @@ import { MediaWriter } from ".";
 
 export class WebmFactory extends MediaWriter {
   webm?: WebmOutput;
+  jitterBuffer!: JitterBuffer;
 
   start(tracks: MediaStreamTrack[]) {
     this.webm = new WebmOutput(
@@ -61,14 +62,16 @@ export class WebmFactory extends MediaWriter {
         track.kind === "video"
           ? new SampleBuilder((h) => !!h.marker).pipe(this.webm!)
           : new SampleBuilder(() => true).pipe(this.webm!);
-      new JitterBuffer({
+      this.jitterBuffer = new JitterBuffer({
         rtpStream: track.onReceiveRtp,
         rtcpStream: track.onReceiveRtcp,
-      }).pipe(sampleBuilder);
+      });
+      this.jitterBuffer.pipe(sampleBuilder);
     });
   }
 
   async stop() {
+    this.jitterBuffer.stop();
     await this.webm!.stop();
   }
 }

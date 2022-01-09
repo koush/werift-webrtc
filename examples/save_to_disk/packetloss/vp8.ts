@@ -19,10 +19,12 @@ server.on("connection", async (socket) => {
 
   const { readable, writable } = transceiver.receiver.createEncodedStreams();
   const transformStream = new TransformStream({
-    transform: (_, controller) => {
+    transform: (data, controller) => {
       if (Math.random() < 0.3) {
         controller.enqueue(undefined);
+        return;
       }
+      controller.enqueue(data);
     },
   });
   readable.pipeThrough(transformStream).pipeTo(writable);

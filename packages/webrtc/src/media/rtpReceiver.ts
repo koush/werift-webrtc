@@ -236,6 +236,7 @@ export class RTCRtpReceiver {
       setImmediate(() => this.insertStream!(packet));
       try {
         [packet] = await this.onStreamTransformed.watch((rtp) => {
+          if (rtp == undefined) return true;
           return rtp.header.sequenceNumber === packet.header.sequenceNumber;
         }, 1000);
       } catch (error) {
