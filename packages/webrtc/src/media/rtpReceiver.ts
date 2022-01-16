@@ -35,7 +35,7 @@ const log = debug("werift:packages/webrtc/src/media/rtpReceiver.ts");
 export class RTCRtpReceiver {
   private readonly codecs: { [pt: number]: RTCRtpCodecParameters } = {};
   private readonly ssrcByRtx: { [rtxSsrc: number]: number } = {};
-  private readonly nack = new Nack(this);
+  private nack?: Nack;
   private readonly redHandler = new RedHandler();
 
   readonly type = "receiver";
@@ -46,7 +46,6 @@ export class RTCRtpReceiver {
   // last senderReport
   readonly lsr: { [ssrc: number]: number } = {};
   readonly lsrTime: { [ssrc: number]: number } = {};
-  readonly onPacketLost = this.nack.onPacketLost;
   readonly onRtcp = new Event<[RtcpPacket]>();
 
   sdesMid?: string;
@@ -82,6 +81,10 @@ export class RTCRtpReceiver {
   prepareReceive(params: RTCRtpReceiveParameters) {
     params.codecs.forEach((c) => {
       this.codecs[c.payloadType] = c;
+      const nack = c.rtcpFeedback.find((r) => r.type === "nack");
+      if (nack) {
+        this.nack = new Nack(this);
+      }
     });
     params.encodings.forEach((e) => {
       if (e.rtx) {
@@ -125,8 +128,12 @@ export class RTCRtpReceiver {
     this.rtcpRunning = false;
     this.rtcpCancel.abort();
 
-    if (this.receiverTWCC) this.receiverTWCC.twccRunning = false;
-    this.nack.close();
+    if (this.receiverTWCC) {
+      this.receiverTWCC.twccRunning = false;
+    }
+    if (this.nack) {
+      this.nack.close();
+    }
   }
 
   async runRtcp() {
@@ -231,7 +238,9 @@ export class RTCRtpReceiver {
     track?: MediaStreamTrack
   ) {
     if (this.stopped) return;
-
+    if (packet == undefined) {
+      packet;
+    }
     if (this.insertStream) {
       setImmediate(() => this.insertStream!(packet));
       try {
@@ -288,8 +297,7 @@ export class RTCRtpReceiver {
       red = Red.deSerialize(packet.payload);
     }
 
-    // todo fix select use or not use nack
-    if (track?.kind === "video") {
+    if (this.nack) {
       this.nack.addPacket(packet);
     }
 

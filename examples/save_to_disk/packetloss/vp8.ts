@@ -1,4 +1,10 @@
-import { MediaRecorder, RTCPeerConnection } from "../../../packages/webrtc/src";
+import {
+  MediaRecorder,
+  RTCPeerConnection,
+  RTCRtpCodecParameters,
+  RtpPacket,
+  Vp8RtpPayload,
+} from "../../../packages/webrtc/src";
 import { Server } from "ws";
 import { TransformStream } from "stream/web";
 
@@ -13,14 +19,28 @@ server.on("connection", async (socket) => {
     height: 360,
   });
 
-  const pc = new RTCPeerConnection();
+  const pc = new RTCPeerConnection({
+    codecs: {
+      video: [
+        new RTCRtpCodecParameters({
+          mimeType: "video/VP8",
+          clockRate: 90000,
+          rtcpFeedback: [],
+        }),
+      ],
+    },
+  });
 
   const transceiver = pc.addTransceiver("video");
 
   const { readable, writable } = transceiver.receiver.createEncodedStreams();
-  const transformStream = new TransformStream({
+  const transformStream = new TransformStream<RtpPacket>({
     transform: (data, controller) => {
-      if (Math.random() < 0.3) {
+      if (!data?.payload) {
+        data;
+      }
+      const packet = Vp8RtpPayload.deSerialize(Buffer.from(data.payload));
+      if (!packet.isKeyframe && Math.random() < 0.1) {
         controller.enqueue(undefined);
         return;
       }
@@ -38,7 +58,7 @@ server.on("connection", async (socket) => {
   setTimeout(() => {
     recorder.stop();
     console.log("stop");
-  }, 5_000);
+  }, 6_000);
 
   await pc.setLocalDescription(await pc.createOffer());
   const sdp = JSON.stringify(pc.localDescription);
