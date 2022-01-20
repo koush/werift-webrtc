@@ -165,8 +165,8 @@ export class RTCRtpSender {
 
     track.id = this.trackId;
 
-    const { unSubscribe } = track.onReceiveRtp.subscribe((rtp) => {
-      this.sendRtp(rtp);
+    const { unSubscribe } = track.onReceiveRtp.subscribe(async (rtp) => {
+      await this.sendRtp(rtp);
     });
     this.track = track;
     this.disposeTrack = unSubscribe;
@@ -270,7 +270,7 @@ export class RTCRtpSender {
     log("replaceRTP", this.sequenceNumber, sequenceNumber, this.seqOffset);
   }
 
-  sendRtp(rtp: Buffer | RtpPacket) {
+  async sendRtp(rtp: Buffer | RtpPacket) {
     if (this.dtlsTransport.state !== "connected" || !this.codec) {
       return;
     }
@@ -350,9 +350,10 @@ export class RTCRtpSender {
     }
 
     if (this.readable) {
+      // todo impl
     }
 
-    const size = this.dtlsTransport.sendRtp(rtpPayload, header);
+    const size = await this.dtlsTransport.sendRtp(rtpPayload, header);
 
     this.runRtcp();
     const sentInfo: SentInfo = {
@@ -398,7 +399,7 @@ export class RTCRtpSender {
             case GenericNack.count:
               {
                 const feedback = packet.feedback as GenericNack;
-                feedback.lost.forEach((seqNum) => {
+                feedback.lost.forEach(async (seqNum) => {
                   let packet = this.rtpCache.find(
                     (rtp) => rtp.header.sequenceNumber === seqNum
                   );
@@ -415,7 +416,10 @@ export class RTCRtpSender {
                         1
                       );
                     }
-                    this.dtlsTransport.sendRtp(packet.payload, packet.header);
+                    await this.dtlsTransport.sendRtp(
+                      packet.payload,
+                      packet.header
+                    );
                   }
                 });
                 this.onGenericNack.execute(feedback);
