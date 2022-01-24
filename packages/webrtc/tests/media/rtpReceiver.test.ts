@@ -11,7 +11,7 @@ import {
   RtpPacket,
 } from "../../src";
 import { RedHandler } from "../../src/media/receiver/red";
-import { RTCRtpReceiver } from "../../src/media/rtpReceiver";
+import { RTCEncodedFrame, RTCRtpReceiver } from "../../src/media/rtpReceiver";
 import { wrapRtx } from "../../src/media/rtpSender";
 import { createDtlsTransport } from "../fixture";
 
@@ -216,9 +216,9 @@ describe("packages/webrtc/src/media/rtpReceiver.ts", () => {
     test("should success insert valid packet", async () => {
       const { receiver, track, readable, writable } = createFixtures();
 
-      const transformStream = new TransformStream<RtpPacket>({
+      const transformStream = new TransformStream<RTCEncodedFrame>({
         transform: (encodedFrame, controller) => {
-          encodedFrame.payload = Buffer.from("insert");
+          encodedFrame.data = Buffer.from("insert");
           controller.enqueue(encodedFrame);
         },
       });
@@ -241,14 +241,17 @@ describe("packages/webrtc/src/media/rtpReceiver.ts", () => {
     test("should timeout insert null packet", async () => {
       const { receiver, track, readable, writable } = createFixtures();
 
-      const transformStream = new TransformStream<RtpPacket>({
-        transform: (_, controller) => {
-          controller.enqueue(undefined);
+      const transformStream = new TransformStream<RTCEncodedFrame>({
+        transform: (frame, controller) => {
+          frame.data = undefined as any;
+          controller.enqueue(frame);
         },
       });
       readable.pipeThrough(transformStream).pipeTo(writable);
-      const err = await track.onReceiveRtp.asPromise(100).catch(() => "error");
-      expect(err).toBe("error");
+      const err = await track.onReceiveRtp
+        .asPromise(100)
+        .catch(() => "timeout");
+      expect(err).toBe("timeout");
       receiver.stop();
     });
   });

@@ -65,7 +65,7 @@ export class RTCRtpReceiver {
   private writable?: WritableStream;
   private readable?: ReadableStream;
   private insertStream?: (rtp: RtpPacket) => void;
-  private onStreamTransformed = new Event<[RtpPacket]>();
+  private onStreamTransformed = new Event<[RTCEncodedFrame]>();
 
   constructor(
     public kind: Kind,
@@ -238,21 +238,21 @@ export class RTCRtpReceiver {
     track?: MediaStreamTrack
   ) {
     if (this.stopped) return;
-    if (packet == undefined) {
-      packet;
-    }
     if (this.insertStream) {
-      setImmediate(() => this.insertStream!(packet));
+      const origin = packet;
+      setImmediate(() => {
+        this.insertStream!(origin);
+      });
       try {
-        [packet] = await this.onStreamTransformed.watch((rtp) => {
-          if (rtp == undefined) return true;
-          return rtp.header.sequenceNumber === packet.header.sequenceNumber;
+        const [frame] = await this.onStreamTransformed.watch((frame) => {
+          return frame.sequenceNumber === origin.header.sequenceNumber;
         }, 1000);
+        if (frame.data == undefined) {
+          return;
+        }
+        packet.payload = frame.data;
       } catch (error) {
         log("stream transform timeout");
-        return;
-      }
-      if (packet == undefined) {
         return;
       }
     }
@@ -323,16 +323,21 @@ export class RTCRtpReceiver {
       throw new Error("createEncodedStreams already called");
     }
 
-    const readable = new ReadableStream<RtpPacket>({
+    const readable = new ReadableStream<RTCEncodedFrame>({
       start: (controller) => {
         this.insertStream = (rtp) => {
-          controller.enqueue(rtp);
+          controller.enqueue({
+            timestamp: rtp.header.timestamp,
+            sequenceNumber: rtp.header.sequenceNumber,
+            data: rtp.payload,
+            ssrc: rtp.header.ssrc,
+          });
         };
       },
     });
-    const writable = new WritableStream<RtpPacket>({
-      write: (rtp) => {
-        this.onStreamTransformed.execute(rtp);
+    const writable = new WritableStream<RTCEncodedFrame>({
+      write: (frame) => {
+        this.onStreamTransformed.execute(frame);
       },
     });
     this.readable = readable;
@@ -354,4 +359,11 @@ export function unwrapRtx(rtx: RtpPacket, payloadType: number, ssrc: number) {
     rtx.payload.slice(2)
   );
   return packet;
+}
+
+export interface RTCEncodedFrame {
+  timestamp: number;
+  sequenceNumber: number;
+  data: Buffer;
+  ssrc: number;
 }
