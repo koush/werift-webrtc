@@ -1,3 +1,4 @@
+import { BinaryLike } from "crypto";
 import Event from "rx.mini";
 
 import { int, PromiseQueue } from "../../../common/src";
@@ -13,6 +14,12 @@ import {
 import { SupportedCodec, WEBMBuilder } from "../container/webm";
 import { Output } from "./base";
 
+export interface WebmIO {
+  writeFile: (path: string, bin: BinaryLike) => Promise<void>;
+  appendFile: (path: string, bin: BinaryLike) => Promise<void>;
+  readFile: (path: string) => Promise<Buffer>;
+}
+
 export class WebmOutput implements Output {
   private builder: WEBMBuilder;
   private queue = new PromiseQueue();
@@ -24,8 +31,7 @@ export class WebmOutput implements Output {
   stopped = false;
 
   constructor(
-    /**fs/promises */
-    private fs: any,
+    private writer: WebmIO,
     public path: string,
     public tracks: {
       width?: number;
@@ -61,7 +67,7 @@ export class WebmOutput implements Output {
       this.builder.ebmlHeader,
       this.builder.createSegment(),
     ]);
-    await this.fs.writeFile(this.path, staticPart);
+    await this.writer.writeFile(this.path, staticPart);
     this.position += staticPart.length;
 
     const video = this.tracks.find((t) => t.kind === "video");
@@ -72,21 +78,25 @@ export class WebmOutput implements Output {
     }
 
     const cluster = this.builder.createCluster(0.0);
-    await this.fs.appendFile(this.path, cluster);
+    await this.writer.appendFile(this.path, cluster);
     this.position += cluster.length;
   }
 
-  async stop() {
+  async stop(insertDuration = true) {
     this.stopped = true;
     if (this.disposer) {
       this.disposer();
+    }
+
+    if (!insertDuration) {
+      return;
     }
 
     const originStaticPartOffset = Buffer.concat([
       this.builder.ebmlHeader,
       this.builder.createSegment(),
     ]).length;
-    const clusters = (await this.fs.readFile(this.path)).slice(
+    const clusters = (await this.writer.readFile(this.path)).slice(
       originStaticPartOffset
     );
 
@@ -115,9 +125,9 @@ export class WebmOutput implements Output {
       cues = this.builder.createCues(this.cuePoints.map((c) => c.build()));
     }
 
-    await this.fs.writeFile(this.path, staticPart);
-    await this.fs.appendFile(this.path, cues);
-    await this.fs.appendFile(this.path, clusters);
+    await this.writer.writeFile(this.path, staticPart);
+    await this.writer.appendFile(this.path, cues);
+    await this.writer.appendFile(this.path, clusters);
   }
 
   pushRtpPackets(packets: RtpPacket[]) {
@@ -152,7 +162,7 @@ export class WebmOutput implements Output {
       this.relativeTimestamp += timestampManager.relativeTimestamp;
 
       const cluster = this.builder.createCluster(this.relativeTimestamp);
-      await this.fs.appendFile(this.path, cluster);
+      await this.writer.appendFile(this.path, cluster);
       this.cuePoints.push(
         new CuePoint(
           this.builder,
@@ -171,7 +181,7 @@ export class WebmOutput implements Output {
       track.trackNumber,
       timestampManager.relativeTimestamp
     );
-    await this.fs.appendFile(this.path, block);
+    await this.writer.appendFile(this.path, block);
     this.position += block.length;
     const [cuePoint] = this.cuePoints.slice(-1);
     if (cuePoint) {

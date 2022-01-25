@@ -5,6 +5,7 @@ import {
   JitterBuffer,
   MediaStreamTrack,
   SampleBuilder,
+  WebmIO,
   WebmOutput,
 } from "../../..";
 import { MediaWriter } from ".";
@@ -15,7 +16,7 @@ export class WebmFactory extends MediaWriter {
 
   start(tracks: MediaStreamTrack[]) {
     this.webm = new WebmOutput(
-      fs,
+      fs as WebmIO,
       "./test.webm",
       tracks.map((track, i) => {
         const trackNumber = i + 1;
@@ -70,9 +71,9 @@ export class WebmFactory extends MediaWriter {
     });
   }
 
-  async stop() {
+  async stop(insertDuration = true) {
     this.jitterBuffer.stop();
-    await this.webm!.stop();
+    await this.webm!.stop(insertDuration);
   }
 }
 
