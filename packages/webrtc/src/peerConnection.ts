@@ -78,6 +78,7 @@ export class RTCPeerConnection extends EventTarget {
   signalingState: RTCSignalingState = "stable";
   negotiationneeded = false;
   readonly transceivers: RTCRtpTransceiver[] = [];
+  candidatesSent = new Set<string>();
 
   readonly iceGatheringStateChange = new Event<[IceGathererState]>();
   readonly iceConnectionStateChange = new Event<[RTCIceConnectionState]>();
@@ -483,6 +484,16 @@ export class RTCPeerConnection extends EventTarget {
       }
 
       candidate.foundation = "candidate:" + candidate.foundation;
+
+      // prevent ice candidates that have already been sent from being being resent
+      // when the connection is renegotiated during a later setLocalDescription call.
+      if (candidate.sdpMid) {
+        const candidateKey = `${candidate.foundation}:${candidate.sdpMid}`;
+        if (this.candidatesSent.has(candidateKey)) {
+          return;
+        }
+        this.candidatesSent.add(candidateKey);
+      }
 
       this.onIceCandidate.execute(candidate.toJSON());
       if (this.onicecandidate) {
