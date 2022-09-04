@@ -113,9 +113,14 @@ export const flight2 =
       }
     })();
     if (suite === undefined || !suites.includes(suite)) {
-      throw new Error("dtls cipher suite negotiation failed");
+      if (suites.includes(CipherSuite.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA)) {
+        cipher.cipherSuite = CipherSuite.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA;
+      } else {
+        throw new Error("dtls cipher suite negotiation failed");
+      }
+    } else {
+      cipher.cipherSuite = suite;
     }
-    cipher.cipherSuite = suite;
     log(dtls.sessionId, "selected cipherSuite", cipher.cipherSuite);
 
     cipher.localKeyPair = generateKeyPair(cipher.namedCurve);

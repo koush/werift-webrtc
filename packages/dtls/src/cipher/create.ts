@@ -8,11 +8,12 @@ import {
 } from "./key-exchange";
 import AEADCipher from "./suites/aead";
 
-const cipherSuites = {
+export const cipherSuites = {
   TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256: 0xc02b,
   TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384: 0xc02c,
   TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256: 0xc02f,
   TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384: 0xc030,
+  TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA: 0xc013,
   TLS_RSA_WITH_AES_128_GCM_SHA256: 0x009c,
   TLS_RSA_WITH_AES_256_GCM_SHA384: 0x009d,
   TLS_PSK_WITH_AES_128_GCM_SHA256: 0x00a8,
@@ -93,6 +94,15 @@ export function createCipher(cipher: number) {
         ECDHE_RSA_KEY_EXCHANGE,
         AEAD_AES_256_GCM,
         "sha384"
+      );
+    case cipherSuites.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA:
+      return createAEADCipher(
+        cipherSuites.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+        "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+        "aes-128-cbc",
+        ECDHE_RSA_KEY_EXCHANGE,
+        AEAD_AES_128_GCM,
+        "sha1"
       );
     case cipherSuites.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256:
       return createAEADCipher(
