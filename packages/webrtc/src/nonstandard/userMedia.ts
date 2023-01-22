@@ -1,8 +1,8 @@
 import { ChildProcess, exec } from "child_process";
 import { createSocket } from "dgram";
-import { setImmediate } from "timers/promises";
 import { v4 } from "uuid";
 
+import { setImmediate } from "../../../common/src";
 import { randomPort, uint32Add } from "../../../common/src";
 import { RtpPacket } from "../../../rtp/src";
 import { MediaStreamTrack } from "../media/track";

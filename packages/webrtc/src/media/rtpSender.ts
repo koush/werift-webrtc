@@ -24,12 +24,12 @@ import { randomBytes } from "crypto";
 import debug from "debug";
 import { jspack } from "jspack";
 import Event from "rx.mini";
-import { setTimeout } from "timers/promises";
 import * as uuid from "uuid";
 
 import {
   bufferWriter,
   random16,
+  setTimeout,
   uint16Add,
   uint32Add,
 } from "../../../common/src";

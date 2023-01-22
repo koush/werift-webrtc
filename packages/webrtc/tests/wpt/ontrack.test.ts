@@ -1,5 +1,5 @@
 // webrtc/RTCPeerConnection-ontrack.https.html
-import { setTimeout } from "timers/promises";
+import { setTimeout } from "../../common/src";
 
 import {
   MediaStreamTrack,

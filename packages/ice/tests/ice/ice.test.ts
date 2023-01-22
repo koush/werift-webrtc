@@ -1,4 +1,4 @@
-import { setTimeout } from "timers/promises";
+import { setTimeout } from "../../../common/src";
 
 import { Candidate } from "../../src/candidate";
 import { CandidatePair, CandidatePairState, Connection } from "../../src/ice";

@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
 import { createSocket } from "dgram";
 import { unlink } from "fs/promises";
-import { setTimeout } from "timers/promises";
+import { setTimeout } from "../../../common/src";
 
 import { randomPort } from "../../src";
 

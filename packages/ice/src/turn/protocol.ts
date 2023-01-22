@@ -3,7 +3,7 @@ import debug from "debug";
 import { jspack } from "jspack";
 import PCancelable from "p-cancelable";
 import Event from "rx.mini";
-import { setTimeout } from "timers/promises";
+import { setTimeout } from "../../../common/src";
 
 import { InterfaceAddresses } from "../../../common/src/network";
 import { Candidate } from "../candidate";

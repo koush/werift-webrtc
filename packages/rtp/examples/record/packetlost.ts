@@ -3,7 +3,7 @@ import { createSocket } from "dgram";
 import { appendFile, open, unlink } from "fs/promises";
 import Event from "rx.mini";
 import { ReadableStreamDefaultReadResult } from "stream/web";
-import { setTimeout } from "timers/promises";
+import { setTimeout } from "../../../common/src";
 
 import {
   depacketizeTransformer,

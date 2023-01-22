@@ -1,4 +1,4 @@
-import { setTimeout } from "timers/promises";
+import { setTimeout } from "../../common/src";
 
 import { MediaStreamTrack } from "../../src";
 import { RTCRtpSender } from "../../src/media/rtpSender";

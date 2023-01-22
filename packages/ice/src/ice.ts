@@ -8,7 +8,7 @@ import { isIPv4 } from "net";
 import os from "os";
 import PCancelable from "p-cancelable";
 import { Event } from "rx.mini";
-import timers from "timers/promises";
+import timers from "../../common/src/sleep";
 
 import { InterfaceAddresses } from "../../common/src/network";
 import { Candidate, candidateFoundation, candidatePriority } from "./candidate";

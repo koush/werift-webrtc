@@ -1,10 +1,9 @@
 import { debug } from "debug";
 import { jspack } from "jspack";
 import Event from "rx.mini";
-import { setTimeout } from "timers/promises";
 import { v4 as uuid } from "uuid";
 
-import { int } from "../../../common/src";
+import { int, setTimeout } from "../../../common/src";
 import {
   PictureLossIndication,
   Red,

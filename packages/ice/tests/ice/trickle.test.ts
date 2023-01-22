@@ -1,4 +1,4 @@
-import { setTimeout } from "timers/promises";
+import { setTimeout } from "../../../common/src";
 
 import { Connection } from "../../src";
 import { assertCandidateTypes } from "../utils";

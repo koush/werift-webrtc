@@ -1,6 +1,6 @@
 import { createSocket } from "dgram";
 import range from "lodash/range";
-import { setTimeout } from "timers/promises";
+import { setTimeout } from "../../common/src";
 import { SCTP, SCTP_STATE, WEBRTC_PPID } from "../src";
 import { createUdpTransport } from "../src/transport";
 

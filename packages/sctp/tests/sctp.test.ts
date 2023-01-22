@@ -1,5 +1,5 @@
 import { createSocket } from "dgram";
-import { setTimeout } from "timers/promises";
+import { setTimeout } from "../../common/src";
 
 import { SCTP, SCTP_STATE } from "../src";
 import { StreamAddOutgoingParam } from "../src/param";

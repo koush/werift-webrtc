@@ -1,7 +1,7 @@
 import debug from "debug";
-import { setTimeout } from "timers/promises";
 
 import { uint8Add, uint16Add, uint24 } from "../../../../common/src";
+import { setTimeout } from "../../../../common/src";
 import {
   PacketStatus,
   RecvDelta,

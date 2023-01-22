@@ -1,9 +1,9 @@
 import { Certificate, PrivateKey } from "@fidm/x509";
 import debug from "debug";
 import Event from "rx.mini";
-import { setTimeout } from "timers/promises";
 import { v4 } from "uuid";
 
+import { setTimeout } from "../../../common/src";
 import {
   DtlsClient,
   DtlsServer,

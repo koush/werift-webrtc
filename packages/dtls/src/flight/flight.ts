@@ -1,5 +1,5 @@
 import debug from "debug";
-import { setTimeout } from "timers/promises";
+import { setTimeout } from "../../../common/src";
 
 import { DtlsContext } from "../context/dtls";
 import { TransportContext } from "../context/transport";
