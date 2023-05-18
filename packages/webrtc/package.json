@@ -1,6 +1,6 @@
 {
   "name": "@koush/werift",
-  "version": "0.17.13",
+  "version": "0.17.14",
   "description": "WebRTC Implementation for TypeScript (Node.js)",
   "keywords": [
     "WebRTC",
