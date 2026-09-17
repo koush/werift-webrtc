@@ -346,6 +346,7 @@ export class RTCRtpReceiver {
     const codec = this.codecs[packet.header.payloadType];
     if (!codec) {
       // log("unknown codec " + packet.header.payloadType);
+      track?.onReceiveRtp.execute(packet.clone(), extensions);
       return;
     }
 
