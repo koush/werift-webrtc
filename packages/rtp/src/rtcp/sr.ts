@@ -130,7 +130,10 @@ export class RtcpSenderInfo {
 }
 
 export const ntpTime2Sec = (ntp: bigint) => {
-  const [ntpSec, ntpMsec] = bufferReader(bufferWriter([8], [ntp]), [4, 4]);
+  // NTP format: high 32 bits are seconds, low 32 bits are a binary
+  // fraction of a second in units of 1/2^32 (RFC 5905 section 6).
+  const ntpSec = Number(ntp >> 32n);
+  const fraction = Number(ntp & 0xffffffffn);
 
-  return Number(`${ntpSec}.${ntpMsec}`);
+  return ntpSec + fraction / 2 ** 32;
 };

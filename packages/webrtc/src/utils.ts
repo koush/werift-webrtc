@@ -62,12 +62,12 @@ export const timestampSeconds = () => Date.now() / 1000;
 export const ntpTime = () => {
   const now = performance.timeOrigin + performance.now() - Date.UTC(1900, 0, 1);
 
-  const seconds = now / 1000;
-  const [sec, msec] = seconds.toString().split(".").map(Number);
-
-  const buf = bufferWriter([4, 4], [sec, msec]);
-
-  return buf.readBigUInt64BE();
+  const seconds = Math.floor(now / 1000);
+  // NTP uses a binary 32-bit fraction of a second, not decimal digits.
+  const fraction = Math.floor(
+    ((now - seconds * 1000) / 1000) * 0x100000000,
+  );
+  return (BigInt(seconds >>> 0) << 32n) | BigInt(fraction);
 };
 
 /**
