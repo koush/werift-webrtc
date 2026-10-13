@@ -1,5 +1,9 @@
 DTLS v1.2 server/client Implementation for TypeScript
 
+The server uses the random from the cookie-authenticated ClientHello for the
+ServerKeyExchange signature and key derivation. Retransmissions of server flight 4
+reuse the cached messages and accepted random.
+
 # Example
 
 ```typescript

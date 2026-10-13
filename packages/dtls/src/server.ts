@@ -4,6 +4,7 @@ import { Flight4 } from "./flight/server/flight4";
 import { Flight6 } from "./flight/server/flight6";
 import { HandshakeType } from "./handshake/const";
 import { ClientHello } from "./handshake/message/client/hello";
+import { DtlsRandom } from "./handshake/random";
 import { debug } from "./imports/common";
 import type { FragmentedHandshake } from "./record/message/fragment";
 import { DtlsSocket, type Options } from "./socket";
@@ -47,6 +48,9 @@ export class DtlsServer extends DtlsSocket {
               this.dtls.cookie &&
               clientHello.cookie.equals(this.dtls.cookie)
             ) {
+              if (this.dtls.flight !== 4) {
+                this.cipher.remoteRandom = DtlsRandom.from(clientHello.random);
+              }
               log(this.dtls.sessionId, "send flight4");
               await new Flight4(
                 this.transport,
