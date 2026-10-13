@@ -4,6 +4,7 @@ import { Flight4 } from "./flight/server/flight4";
 import { Flight6 } from "./flight/server/flight6";
 import { HandshakeType } from "./handshake/const";
 import { ClientHello } from "./handshake/message/client/hello";
+import { DtlsRandom } from "./handshake/random";
 import { debug } from "./imports/common";
 import type { FragmentedHandshake } from "./record/message/fragment";
 import { DtlsSocket, type Options } from "./socket";
@@ -36,6 +37,12 @@ export class DtlsServer extends DtlsSocket {
             const clientHello = ClientHello.deSerialize(handshake.fragment);
 
             if (clientHello.cookie.length === 0) {
+              // a late or retransmitted hello (e.g. from another ICE path)
+              // would reset the handshake state that flight4 already used.
+              if (!this.connected && this.dtls.flight >= 4) {
+                log(this.dtls.sessionId, "ignore late client hello");
+                break;
+              }
               log(this.dtls.sessionId, "send flight2");
               flight2(
                 this.transport,
@@ -47,6 +54,11 @@ export class DtlsServer extends DtlsSocket {
               this.dtls.cookie &&
               clientHello.cookie.equals(this.dtls.cookie)
             ) {
+              // the client may have sent other ClientHellos on other ICE paths
+              // since flight2; sign with the random of the one we are answering.
+              if (this.dtls.flight !== 4) {
+                this.cipher.remoteRandom = DtlsRandom.from(clientHello.random);
+              }
               log(this.dtls.sessionId, "send flight4");
               await new Flight4(
                 this.transport,
