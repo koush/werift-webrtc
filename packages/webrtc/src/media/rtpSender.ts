@@ -240,6 +240,12 @@ export class RTCRtpSender {
     this.stopped = true;
     this.rtcpRunning = false;
     this.rtcpCancel.abort();
+    // the dtls transport is shared by the peer connection and outlives this
+    // sender: a subscription left on it keeps the stopped sender reachable.
+    for (const dispose of this.dtlsDisposer) {
+      dispose();
+    }
+    this.dtlsDisposer = [];
     if (this.disposeTrack) {
       this.disposeTrack();
     }

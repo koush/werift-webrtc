@@ -34,6 +34,25 @@ export class RtpRouter {
     this.ssrcTable[sender.ssrc] = sender;
   }
 
+  /**
+   * Drop every route to a transceiver that the peer connection no longer holds.
+   * Without this the router keeps the transceiver, and everything its sender
+   * and receiver reference, reachable until the peer connection closes.
+   */
+  unregisterTransceiver(transceiver: RTCRtpTransceiver) {
+    const { sender, receiver } = transceiver;
+    for (const [ssrc, endpoint] of Object.entries(this.ssrcTable)) {
+      if (endpoint === sender || endpoint === receiver) {
+        delete this.ssrcTable[Number(ssrc)];
+      }
+    }
+    for (const [rid, endpoint] of Object.entries(this.ridTable)) {
+      if (endpoint === sender || endpoint === receiver) {
+        delete this.ridTable[rid];
+      }
+    }
+  }
+
   private registerRtpReceiver(receiver: RTCRtpReceiver, ssrc: number) {
     log("registerRtpReceiver", ssrc);
     this.ssrcTable[ssrc] = receiver;
