@@ -71,6 +71,11 @@ export class TransceiverManager {
   }
 
   replaceTransceiver(t: RTCRtpTransceiver, index: number): void {
+    const replaced = this.transceivers[index];
+    if (replaced && replaced !== t) {
+      // the replaced transceiver is no longer reachable through the peer connection
+      this.router.unregisterTransceiver(replaced);
+    }
     this.transceivers[index] = t;
   }
 
